@@ -1,0 +1,13 @@
+---
+- name: Upgrade CentOS 8 systems and check status
+  hosts: myhosts
+  become: true
+  tasks:
+    - name: Update package list
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Collect system facts
+      setup:
+
