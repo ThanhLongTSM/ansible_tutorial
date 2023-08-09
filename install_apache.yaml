@@ -2,13 +2,10 @@
 - hosts: all
   become: true
   tasks:
-
-    - name: Update repositary index
-      dnf:
-        name: '*'
-        state: latest
-
-    - name: Install apache2 package
-      yum:
-        name: httpd
-        state: latest
+  - name: Install apache and php
+    package:
+      name:
+        - "{{apache_package}}"
+        - "{{php_package}}"
+      state: latest
+      update_cache: yes

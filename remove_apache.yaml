@@ -1,8 +1,9 @@
 ---
- - hosts: myhosts
+ - hosts: all
    become: true
    tasks:
    - name: remove apache
      yum:
        name: httpd
        state: absent
+     when: ansible_distribution == "CentOS"
