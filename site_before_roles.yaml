@@ -1,0 +1,121 @@
+---
+- hosts: all
+  become: true
+  tasks:
+  - name: Install updates (CentOS)
+    tags: always
+    dnf:
+      update_cache: yes
+    changed_when: false
+    when: ansible_distribution == "CentOS"
+  
+  - name: Install update (Ubuntu)
+    tags: always
+    apt:
+      update_cache: yes
+    changed_when: false
+    when: ansible_distribution == "Ubuntu"
+
+- hosts: all
+  become: true
+  tasks:
+  - name: add sshkey for simone
+    tags: always
+    authorized_key:
+      user: simone
+      key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC6hLoGI6L2kAsCY/LNkyTXsuFWThei4YBsIHsjj/W3Z5p9GLq+A7LrfJeLq5girCnpiiILjfawUhXXzXlJychR4VQhVW/hgooAWjdcI2yMs4mvhSP+M6zhD8zXp1ueG6+nlTqLd/CxqcpnGtxIRUMXdV1REbTiuqmTH0RLyIpOlOhNfQ4jbOMhO1g/hcYp0qVawFA6W9kO6hAJb2mHeAWd9Je97kKuPrTDTUrwoWRg8W6DrS8Bsd6LsJJBc0Oa5RDuApvUztXe4J9Z/7jK+aEZ7yLqV42R4esxIuEQYQNTKPaFVrZGX4hKyhIyjkUH2A1myqkNWeikMoqk+RUGw1tkAbof785qSyJ6nXeu8eazjrH/bbfzM5njqn5XqAN8Vh2wsAGmcv/kciRBuZ1MRxZPi1TTUG/sOzKk8n+2qkF2q6b9QXTu2JO/6Ez7oUCzkNYO7DHRTi4yYFc4i8sLZegzxQCV+jX6iRxVlEabmiusiwiLU1WB+8MRLC2XrwDMNKU= vm@localhost.localdomain"
+
+
+- hosts: file_servers
+  become: true
+  tasks:
+  - name: install unzip
+    package:
+      name: unzip
+  - name: install terraform
+    unarchive:
+      src: https://releases.hashicorp.com/terraform/0.12.28/terraform_0.12.28_linux_amd64.zip
+      dest: /usr/local/bin
+      remote_src: yes
+      mode: 0755
+      owner: root
+      group: root
+
+
+- hosts: all
+  become: true
+  tags: apache,httpd,centos,ubuntu,apache2
+  tasks:
+    - name: Install apache and php
+      package:
+        name:
+          - "{{apache_package}}"
+          - "{{php_package}}"
+        state: latest
+
+    - name: start httpd (CentOS)
+      tags: apache,centos,httpd
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+      when: ansible_distribution == "CentOS"
+
+    - name: copy default html file for site
+      tags: apache,apache2,httpd
+      copy:
+        src: defaults_site.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Change email address for admin
+      tags: apache,centos,httpd
+      lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^ServerAdmin'
+        line: ServerAdmin somebody@somewhere.net
+      when: ansible_distribution == "CentOS"
+      register: httpd
+
+
+    - name: Restart httpd (Centos)
+      tags: apache,centos,httpd
+      service:
+        name: httpd
+        state: restarted
+      when: httpd.changed
+- hosts: db_servers
+  become: true
+  tasks:
+  - name: install mariadb package (CentOS)
+    tags: centos,db,mariadb
+    dnf:
+      name: mariadb-server
+      state: latest
+    when: ansible_distribution == "CentOS"
+
+  - name: install mairadb package (Ubuntu)
+    tags: db, ubuntu,mariadb
+    apt:
+      name: mariadb-server
+      state: latest
+    when: ansible_distribution == "Ubuntu"
+
+
+- hosts: file_servers
+  become: true
+  tasks:
+    - name: install samba (CentOS)
+      tags: samba
+      dnf:
+        name: samba-client
+        state: latest
+      when: ansible_distribution == "CentOS"
+    - name: install samba (Ubuntu)
+      tags: samba
+      apt:
+        name: samba
+        state: latest
+      when: ansible_distribution == "Ubuntu"
